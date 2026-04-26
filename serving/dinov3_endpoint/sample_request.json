@@ -1,0 +1,21 @@
+{
+  "parameters": {
+    "task": "occupancy"
+  },
+  "instances": [
+    {
+      "perception": {
+        "people": [
+          {
+            "frame_index": 0,
+            "track_id": "person_1",
+            "overlap_frac_of_person": 0.42,
+            "distance_norm": 0.15,
+            "displacement_from_prev": null,
+            "score": 0.91
+          }
+        ]
+      }
+    }
+  ]
+}

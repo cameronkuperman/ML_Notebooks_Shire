@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Triplet Inference</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --surface: #ffffff;
+      --ink: #1f252b;
+      --muted: #65717d;
+      --line: #d9dfdc;
+      --green: #2f7d4f;
+      --blue: #3157a4;
+      --amber: #bd7a18;
+      --red: #bd4a3d;
+      --teal: #0f7b72;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--bg); }
+    button, input { font: inherit; }
+    button {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: var(--ink);
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 18px clamp(16px, 4vw, 36px);
+      background: white;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    h1 { margin: 0; font-size: 19px; }
+    .subline { margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .workspace { width: min(1380px, 100%); margin: 0 auto; padding: 20px clamp(14px, 3vw, 32px) 34px; }
+    .upload {
+      display: grid;
+      grid-template-columns: minmax(260px, 340px) 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .dropzone {
+      min-height: 180px;
+      border: 1.5px dashed #aab5b2;
+      border-radius: 8px;
+      background: white;
+      padding: 18px;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .dropzone.dragover { border-color: var(--teal); background: #e9f5f2; }
+    .drop-title { font-weight: 800; font-size: 18px; }
+    .drop-meta, .toast { color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .history-input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .frames { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .frame, .panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(25, 34, 43, .07);
+    }
+    .frame-head, .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .frame img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #dde4e1; }
+    .empty-frame { display: grid; place-items: center; aspect-ratio: 4 / 3; color: var(--muted); background: #dde4e1; }
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr); gap: 18px; align-items: start; }
+    .panel-body { padding: 15px; }
+    .timeline { display: grid; gap: 12px; }
+    .stage { border: 1px solid var(--line); border-radius: 8px; padding: 13px; display: grid; gap: 9px; background: #fbfcfc; }
+    .stage.accepted { border-color: rgba(47, 125, 79, .55); background: #f0f8f3; }
+    .stage.fallback { border-color: rgba(189, 122, 24, .58); background: #fff8ea; }
+    .stage.final { border-color: rgba(49, 87, 164, .55); background: #f1f5ff; }
+    .stage.skipped { opacity: .65; }
+    .stage-top, .metric-line { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .stage-name { font-weight: 800; }
+    .badge { border-radius: 999px; padding: 4px 8px; font-size: 12px; font-weight: 800; color: white; background: var(--muted); }
+    .accepted .badge { background: var(--green); }
+    .fallback .badge { background: var(--amber); }
+    .final .badge { background: var(--blue); }
+    .bar { height: 9px; border-radius: 999px; background: #e4e9e7; overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 0%; background: var(--teal); }
+    .final-card { border-radius: 8px; padding: 15px; color: white; background: var(--ink); display: grid; gap: 8px; }
+    .final-card.clean { background: var(--green); }
+    .final-card.dirty { background: var(--red); }
+    .final-card.occupied { background: var(--blue); }
+    .final-label { font-size: clamp(28px, 5vw, 42px); line-height: 1; font-weight: 900; text-transform: uppercase; }
+    .final-meta { font-size: 14px; opacity: .94; line-height: 1.4; }
+    pre {
+      margin: 0;
+      max-height: 360px;
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #171b20;
+      color: #d8ede7;
+      padding: 14px;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    @media (max-width: 980px) { .upload, .main-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 720px) { .topbar { align-items: flex-start; flex-direction: column; } .frames { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Triplet Inference</h1>
+      <div class="subline">Local FastAPI flow: perception.json occupancy, middle-frame .pt clean/dirty, Gemini escalation when needed.</div>
+    </div>
+    <div class="toast" id="health">Checking models...</div>
+  </header>
+
+  <main class="workspace">
+    <section class="upload">
+      <div id="dropzone" class="dropzone" tabindex="0" role="button">
+        <input id="fileInput" type="file" accept=".zip,application/zip" hidden>
+        <div class="drop-title">Drop a triplet zip</div>
+        <div class="drop-meta">Required: frame_0.jpg, frame_1.jpg, frame_2.jpg, perception.json.</div>
+        <input id="history" class="history-input" placeholder="Optional prior states, e.g. occupied, dirty, dirty">
+        <button id="chooseButton" type="button">Choose Zip</button>
+        <button id="runButton" type="button" disabled>Run Inference</button>
+        <div class="toast" id="status">No zip selected.</div>
+      </div>
+      <div class="frames" id="frames"></div>
+    </section>
+
+    <section class="main-grid">
+      <section class="panel">
+        <div class="panel-head"><strong>Pipeline Timeline</strong><span id="threshold"></span></div>
+        <div class="panel-body"><div class="timeline" id="timeline"></div></div>
+      </section>
+      <aside class="panel">
+        <div class="panel-head"><strong>Decision</strong></div>
+        <div class="panel-body">
+          <div id="final" class="final-card">
+            <div class="final-label">Ready</div>
+            <div class="final-meta">Upload a prepared triplet zip to run the local models.</div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel" style="margin-top:18px">
+      <div class="panel-head"><strong>perception.json</strong></div>
+      <div class="panel-body"><pre id="json">[]</pre></div>
+    </section>
+  </main>
+
+  <script>
+    const state = { file: null, result: null };
+    const els = {
+      health: document.getElementById("health"),
+      dropzone: document.getElementById("dropzone"),
+      fileInput: document.getElementById("fileInput"),
+      chooseButton: document.getElementById("chooseButton"),
+      runButton: document.getElementById("runButton"),
+      status: document.getElementById("status"),
+      frames: document.getElementById("frames"),
+      timeline: document.getElementById("timeline"),
+      final: document.getElementById("final"),
+      json: document.getElementById("json"),
+      threshold: document.getElementById("threshold"),
+      history: document.getElementById("history")
+    };
+
+    function init() {
+      renderEmptyFrames();
+      fetch("/api/health")
+        .then((res) => res.json())
+        .then((data) => {
+          els.health.textContent = `Loaded: ${data.models.join(", ") || "none"}`;
+          els.threshold.textContent = `threshold ${Math.round(data.threshold * 100)}%`;
+        })
+        .catch((err) => { els.health.textContent = err.message; });
+
+      els.chooseButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        els.fileInput.click();
+      });
+      els.dropzone.addEventListener("click", () => els.fileInput.click());
+      els.fileInput.addEventListener("change", (event) => setFile(event.target.files[0]));
+      els.runButton.addEventListener("click", runInference);
+
+      ["dragenter", "dragover"].forEach((type) => {
+        els.dropzone.addEventListener(type, (event) => {
+          event.preventDefault();
+          els.dropzone.classList.add("dragover");
+        });
+      });
+      ["dragleave", "drop"].forEach((type) => {
+        els.dropzone.addEventListener(type, (event) => {
+          event.preventDefault();
+          els.dropzone.classList.remove("dragover");
+        });
+      });
+      els.dropzone.addEventListener("drop", (event) => setFile(event.dataTransfer.files[0]));
+    }
+
+    function setFile(file) {
+      state.file = file || null;
+      state.result = null;
+      els.runButton.disabled = !state.file;
+      els.status.textContent = state.file ? `Selected ${state.file.name}` : "No zip selected.";
+      renderEmptyFrames();
+      renderTimeline([]);
+      renderFinal(null);
+      els.json.textContent = "[]";
+    }
+
+    async function runInference() {
+      if (!state.file) return;
+      els.status.textContent = "Running local inference...";
+      els.runButton.disabled = true;
+      const body = new FormData();
+      body.append("file", state.file);
+      body.append("history", els.history.value);
+      try {
+        const response = await fetch("/api/predict-triplet", { method: "POST", body });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Prediction failed.");
+        state.result = data;
+        renderFrames(data.frames);
+        renderTimeline(data.stages);
+        renderFinal(data.final);
+        els.json.textContent = JSON.stringify(data.perception, null, 2);
+        els.status.textContent = `${data.final.source} produced ${data.final.label}.`;
+      } catch (err) {
+        els.status.textContent = err.message;
+      } finally {
+        els.runButton.disabled = !state.file;
+      }
+    }
+
+    function renderEmptyFrames() {
+      els.frames.innerHTML = "";
+      for (let i = 0; i < 3; i += 1) {
+        els.frames.insertAdjacentHTML("beforeend", `<article class="frame"><div class="frame-head">Frame ${i}<span>empty</span></div><div class="empty-frame">frame_${i}.jpg</div></article>`);
+      }
+    }
+
+    function renderFrames(frames) {
+      els.frames.innerHTML = "";
+      ["frame_0.jpg", "frame_1.jpg", "frame_2.jpg"].forEach((name, index) => {
+        const frame = frames[name];
+        els.frames.insertAdjacentHTML("beforeend", `<article class="frame"><div class="frame-head">Frame ${index}<span>${escapeHtml(name)}</span></div><img src="${frame.data_url}" alt="${escapeHtml(name)}"></article>`);
+      });
+    }
+
+    function renderTimeline(stages = []) {
+      if (!stages.length) {
+        els.timeline.innerHTML = `<div class="toast">Waiting for inference.</div>`;
+        return;
+      }
+      els.timeline.innerHTML = stages.map((item) => {
+        const confidence = typeof item.confidence === "number" ? item.confidence : 0;
+        const pct = Math.round(confidence * 100);
+        return `<article class="stage ${item.status}">
+          <div class="stage-top"><span class="stage-name">${escapeHtml(item.stage)}</span><span class="badge">${escapeHtml(item.status)}</span></div>
+          <div class="metric-line"><span>${escapeHtml(item.label)}</span><span>${typeof item.confidence === "number" ? `${pct}%` : ""}</span></div>
+          <div class="bar"><span style="width:${pct}%"></span></div>
+          <div class="toast">${escapeHtml(item.reason)}</div>
+        </article>`;
+      }).join("");
+    }
+
+    function renderFinal(final) {
+      if (!final) {
+        els.final.className = "final-card";
+        els.final.innerHTML = `<div class="final-label">Ready</div><div class="final-meta">Upload a prepared triplet zip to run the local models.</div>`;
+        return;
+      }
+      const confidence = typeof final.confidence === "number" ? Math.round(final.confidence * 100) : 0;
+      els.final.className = `final-card ${final.label}`;
+      els.final.innerHTML = `<div class="final-label">${escapeHtml(final.label)}</div><div class="final-meta">${confidence}% confidence from ${escapeHtml(final.source)}.</div>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+
+    init();
+  </script>
+</body>
+</html>

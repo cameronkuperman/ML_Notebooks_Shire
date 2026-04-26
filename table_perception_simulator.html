@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Three-Image Perception Flow Demo</title>
+  <style>
+    :root {
+      --bg: #f5f3ee;
+      --surface: #ffffff;
+      --surface-2: #eef4f2;
+      --ink: #20242a;
+      --muted: #67707b;
+      --line: #d8ddd9;
+      --teal: #0f7b72;
+      --blue: #3157a4;
+      --amber: #c78318;
+      --coral: #c94f41;
+      --green: #2f7d4f;
+      --shadow: 0 12px 35px rgba(25, 34, 43, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: var(--ink);
+      color: #fff;
+      cursor: pointer;
+      transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+      white-space: nowrap;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: #11151a;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: var(--surface-2);
+    }
+
+    select {
+      min-width: 210px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px clamp(16px, 4vw, 36px);
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: var(--teal);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.1;
+      font-weight: 760;
+    }
+
+    .subline {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .workspace {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      padding: 20px clamp(14px, 3vw, 32px) 32px;
+    }
+
+    .upload-band {
+      display: grid;
+      grid-template-columns: minmax(220px, 300px) 1fr;
+      gap: 16px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+
+    .dropzone {
+      border: 1.5px dashed #aeb9b5;
+      border-radius: 8px;
+      background: #fff;
+      min-height: 162px;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--teal);
+      background: #e9f5f2;
+    }
+
+    .drop-title {
+      font-weight: 760;
+      font-size: 18px;
+    }
+
+    .drop-meta {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .image-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .image-slot {
+      min-width: 0;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .slot-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .slot-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .image-frame {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      background: #dfe5e2;
+      overflow: hidden;
+    }
+
+    .image-frame.empty {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .image-frame img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .table-region,
+    .bbox {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .table-region {
+      border: 2px solid rgba(15, 123, 114, 0.95);
+      background: rgba(15, 123, 114, 0.14);
+    }
+
+    .bbox {
+      border: 2px solid rgba(201, 79, 65, 0.95);
+      background: rgba(201, 79, 65, 0.08);
+    }
+
+    .box-label {
+      position: absolute;
+      left: -2px;
+      top: -24px;
+      max-width: 180px;
+      padding: 3px 6px;
+      border-radius: 6px 6px 6px 0;
+      background: #20242a;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 760;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .stage {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+      background: #fbfcfc;
+      display: grid;
+      gap: 10px;
+    }
+
+    .stage.accepted {
+      border-color: rgba(47, 125, 79, 0.55);
+      background: #f0f8f3;
+    }
+
+    .stage.fallback {
+      border-color: rgba(199, 131, 24, 0.58);
+      background: #fff8ea;
+    }
+
+    .stage.final {
+      border-color: rgba(49, 87, 164, 0.55);
+      background: #f1f5ff;
+    }
+
+    .stage.skipped {
+      opacity: 0.64;
+    }
+
+    .stage-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .stage-name {
+      font-weight: 760;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 760;
+      color: #fff;
+      background: var(--muted);
+      white-space: nowrap;
+    }
+
+    .badge.accepted {
+      background: var(--green);
+    }
+
+    .badge.fallback {
+      background: var(--amber);
+    }
+
+    .badge.final {
+      background: var(--blue);
+    }
+
+    .badge.skipped {
+      background: #87909a;
+    }
+
+    .confidence-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .bar {
+      height: 9px;
+      border-radius: 999px;
+      background: #e4e9e7;
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: var(--teal);
+    }
+
+    .stage.fallback .bar span {
+      background: var(--amber);
+    }
+
+    .stage.final .bar span {
+      background: var(--blue);
+    }
+
+    .stage.skipped .bar span {
+      background: #a9b1b8;
+    }
+
+    .stage-reason {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .decision {
+      display: grid;
+      gap: 16px;
+    }
+
+    .final-state {
+      border-radius: 8px;
+      padding: 15px;
+      color: #fff;
+      background: var(--ink);
+      display: grid;
+      gap: 8px;
+    }
+
+    .final-state.clean {
+      background: var(--green);
+    }
+
+    .final-state.dirty {
+      background: var(--coral);
+    }
+
+    .final-state.occupied {
+      background: var(--blue);
+    }
+
+    .final-label {
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .final-meta {
+      font-size: 14px;
+      opacity: 0.93;
+      line-height: 1.4;
+    }
+
+    .metric-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .metric {
+      display: grid;
+      gap: 6px;
+    }
+
+    .metric-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .history {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .history-pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 9px;
+      background: var(--surface-2);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .json-panel {
+      margin-top: 18px;
+    }
+
+    .json-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    pre {
+      margin: 0;
+      max-height: 380px;
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #171b20;
+      color: #d8ede7;
+      padding: 14px;
+      font-size: 12px;
+      line-height: 1.55;
+      tab-size: 2;
+    }
+
+    .toast {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1020px) {
+      .upload-band,
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar,
+      .panel-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .controls {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .controls > *,
+      .json-actions > * {
+        flex: 1 1 160px;
+      }
+
+      .image-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .workspace {
+        padding-inline: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">P</div>
+        <div>
+          <h1>Three-Image Perception Flow</h1>
+          <div class="subline">Mock perception.json, confidence routing, and fallback visualization.</div>
+        </div>
+      </div>
+      <div class="controls">
+        <select id="scenarioSelect" aria-label="Mock scenario"></select>
+        <button id="runButton" disabled>Run Simulation</button>
+        <button id="randomButton" class="secondary">Randomize Mock Results</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="upload-band">
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Select or drop three table images">
+          <input id="fileInput" type="file" accept="image/*" multiple hidden>
+          <div class="drop-title">Drop 3 table images</div>
+          <div class="drop-meta"><span id="imageCount">0</span>/3 loaded. Click here to browse.</div>
+          <button id="selectButton" type="button" class="secondary">Select Images</button>
+        </div>
+
+        <div id="imageStrip" class="image-strip" aria-live="polite"></div>
+      </section>
+
+      <section class="main-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Pipeline Timeline</h2>
+            <div class="toast" id="routeToast">Waiting for 3 images.</div>
+          </div>
+          <div class="panel-body">
+            <div id="timeline" class="timeline">
+              <div class="empty-state">Run the simulation to see YOLO/perception, MLP, clean/dirty, GRU, and Gemini routing.</div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Decision</h2>
+          </div>
+          <div class="panel-body decision">
+            <div id="finalState" class="final-state">
+              <div class="final-label">READY</div>
+              <div class="final-meta">Upload 3 images, then run a mocked table-state flow.</div>
+            </div>
+
+            <div>
+              <h3 class="panel-title">Confidence</h3>
+              <div id="metricList" class="metric-list"></div>
+            </div>
+
+            <div>
+              <h3 class="panel-title">Previous State</h3>
+              <div id="history" class="history"></div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="panel json-panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Generated perception.json</h2>
+          <div class="json-actions">
+            <button id="copyJsonButton" class="secondary" disabled>Copy JSON</button>
+            <span id="copyStatus" class="toast"></span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <pre id="jsonOutput">[]</pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const OCCUPANCY_THRESHOLD = 0.8;
+    const CLEAN_DIRTY_THRESHOLD = 0.8;
+    const GRU_THRESHOLD = 0.75;
+
+    const scenarios = [
+      {
+        id: "occupied",
+        name: "Confident occupied",
+        history: ["occupied", "occupied", "occupied"],
+        finalFallback: "occupied",
+        occupancy: { label: "occupied", confidence: 0.93, reason: "Stable person overlap and low movement near the table." },
+        cleanDirty: null,
+        gru: { label: "occupied", confidence: 0.82, reason: "History agrees with current occupied signal." },
+        gemini: { label: "occupied", confidence: 0.88, reason: "Visual fallback would call this occupied." },
+        frames: [
+          { peopleCount: 1, box: [0.32, 0.20, 0.28, 0.58], overlap: 0.74, tableOverlap: 0.31, distance: 0.08, score: 0.94, displacement: null },
+          { peopleCount: 1, box: [0.33, 0.20, 0.28, 0.58], overlap: 0.79, tableOverlap: 0.33, distance: 0.07, score: 0.95, displacement: 0.02 },
+          { peopleCount: 1, box: [0.34, 0.19, 0.28, 0.59], overlap: 0.81, tableOverlap: 0.34, distance: 0.07, score: 0.96, displacement: 0.02 }
+        ]
+      },
+      {
+        id: "clean",
+        name: "Confident unoccupied clean",
+        history: ["occupied", "clean", "clean"],
+        finalFallback: "clean",
+        occupancy: { label: "unoccupied", confidence: 0.91, reason: "No stable person track intersects the table area." },
+        cleanDirty: { label: "clean", confidence: 0.88, reason: "Table surface has low clutter and no dish-like residues." },
+        gru: { label: "clean", confidence: 0.81, reason: "History remained clean after the last occupied state." },
+        gemini: { label: "clean", confidence: 0.84, reason: "Fallback visual read would call this clean." },
+        frames: [
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: null },
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: 0 },
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: 0 }
+        ]
+      },
+      {
+        id: "dirty",
+        name: "Confident unoccupied dirty",
+        history: ["occupied", "occupied", "dirty"],
+        finalFallback: "dirty",
+        occupancy: { label: "unoccupied", confidence: 0.89, reason: "People have cleared the table across the three-frame window." },
+        cleanDirty: { label: "dirty", confidence: 0.92, reason: "Mock classifier sees leftover objects on the table surface." },
+        gru: { label: "dirty", confidence: 0.86, reason: "Transition from occupied to empty suggests dirty until cleaned." },
+        gemini: { label: "dirty", confidence: 0.9, reason: "Fallback visual read would call this dirty." },
+        frames: [
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: null },
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: 0 },
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: 0 }
+        ]
+      },
+      {
+        id: "gru",
+        name: "Uncertain MLP, GRU resolves",
+        history: ["occupied", "dirty", "dirty"],
+        finalFallback: "dirty",
+        occupancy: { label: "uncertain", confidence: 0.58, reason: "Transient person-like signal is not stable enough to accept." },
+        cleanDirty: null,
+        gru: { label: "dirty", confidence: 0.84, reason: "Previous dirty state persists after weak current evidence." },
+        gemini: { label: "dirty", confidence: 0.87, reason: "Fallback visual read would preserve dirty state." },
+        frames: [
+          { peopleCount: 1, box: [0.58, 0.16, 0.16, 0.45], overlap: 0.18, tableOverlap: 0.06, distance: 0.31, score: 0.47, displacement: null },
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: 0.14 },
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: 0.18 }
+        ]
+      },
+      {
+        id: "gemini",
+        name: "GRU uncertain, Gemini fallback",
+        history: ["clean", "occupied", "uncertain"],
+        finalFallback: "dirty",
+        occupancy: { label: "uncertain", confidence: 0.52, reason: "Mixed geometry and object evidence below confidence gate." },
+        cleanDirty: null,
+        gru: { label: "uncertain", confidence: 0.62, reason: "Recent states conflict, so history is not decisive." },
+        gemini: { label: "dirty", confidence: 0.86, reason: "Gemini fallback sees likely leftover table clutter." },
+        frames: [
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: null },
+          { peopleCount: 1, box: [0.18, 0.25, 0.22, 0.45], overlap: 0.28, tableOverlap: 0.1, distance: 0.24, score: 0.55, displacement: 0.12 },
+          { peopleCount: 0, box: null, overlap: 0, tableOverlap: 0, distance: 1, score: 0, displacement: 0.09 }
+        ]
+      }
+    ];
+
+    const state = {
+      images: [],
+      scenarioIndex: 0,
+      perception: [],
+      stages: [],
+      finalDecision: null
+    };
+
+    const els = {
+      dropzone: document.getElementById("dropzone"),
+      fileInput: document.getElementById("fileInput"),
+      selectButton: document.getElementById("selectButton"),
+      imageCount: document.getElementById("imageCount"),
+      imageStrip: document.getElementById("imageStrip"),
+      scenarioSelect: document.getElementById("scenarioSelect"),
+      runButton: document.getElementById("runButton"),
+      randomButton: document.getElementById("randomButton"),
+      timeline: document.getElementById("timeline"),
+      routeToast: document.getElementById("routeToast"),
+      finalState: document.getElementById("finalState"),
+      metricList: document.getElementById("metricList"),
+      history: document.getElementById("history"),
+      jsonOutput: document.getElementById("jsonOutput"),
+      copyJsonButton: document.getElementById("copyJsonButton"),
+      copyStatus: document.getElementById("copyStatus")
+    };
+
+    function init() {
+      scenarios.forEach((scenario, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = scenario.name;
+        els.scenarioSelect.appendChild(option);
+      });
+
+      els.dropzone.addEventListener("click", () => els.fileInput.click());
+      els.selectButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        els.fileInput.click();
+      });
+      els.fileInput.addEventListener("change", (event) => handleFiles(event.target.files));
+
+      ["dragenter", "dragover"].forEach((type) => {
+        els.dropzone.addEventListener(type, (event) => {
+          event.preventDefault();
+          els.dropzone.classList.add("dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((type) => {
+        els.dropzone.addEventListener(type, (event) => {
+          event.preventDefault();
+          els.dropzone.classList.remove("dragover");
+        });
+      });
+
+      els.dropzone.addEventListener("drop", (event) => handleFiles(event.dataTransfer.files));
+      els.scenarioSelect.addEventListener("change", () => {
+        state.scenarioIndex = Number(els.scenarioSelect.value);
+        if (state.images.length === 3) runSimulation();
+      });
+      els.runButton.addEventListener("click", runSimulation);
+      els.randomButton.addEventListener("click", randomizeScenario);
+      els.copyJsonButton.addEventListener("click", copyJson);
+
+      renderImages();
+      renderHistory();
+    }
+
+    function handleFiles(fileList) {
+      const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/")).slice(0, 3);
+      revokeImageUrls();
+      state.images = files.map((file) => ({
+        file,
+        name: file.name,
+        url: URL.createObjectURL(file),
+        naturalWidth: 1280,
+        naturalHeight: 960
+      }));
+
+      if (state.images.length !== 3) {
+        state.perception = [];
+        state.stages = [];
+        state.finalDecision = null;
+        els.routeToast.textContent = "Load exactly 3 images.";
+        els.copyJsonButton.disabled = true;
+        els.jsonOutput.textContent = "[]";
+      }
+
+      renderImages();
+      updateRunState();
+    }
+
+    function revokeImageUrls() {
+      state.images.forEach((image) => URL.revokeObjectURL(image.url));
+    }
+
+    function updateRunState() {
+      els.imageCount.textContent = String(state.images.length);
+      els.runButton.disabled = state.images.length !== 3;
+    }
+
+    function renderImages() {
+      els.imageStrip.innerHTML = "";
+      for (let i = 0; i < 3; i += 1) {
+        const image = state.images[i];
+        const slot = document.createElement("article");
+        slot.className = "image-slot";
+
+        const head = document.createElement("div");
+        head.className = "slot-head";
+        head.innerHTML = `<span>Frame ${i}</span><span class="slot-name">${image ? escapeHtml(image.name) : "empty"}</span>`;
+
+        const frame = document.createElement("div");
+        frame.className = `image-frame${image ? "" : " empty"}`;
+        frame.dataset.frameIndex = String(i);
+
+        if (image) {
+          const img = document.createElement("img");
+          img.src = image.url;
+          img.alt = `Uploaded table frame ${i}`;
+          img.addEventListener("load", () => {
+            image.naturalWidth = img.naturalWidth || 1280;
+            image.naturalHeight = img.naturalHeight || 960;
+          });
+          frame.appendChild(img);
+        } else {
+          frame.textContent = `Frame ${i}`;
+        }
+
+        slot.append(head, frame);
+        els.imageStrip.appendChild(slot);
+      }
+
+      updateRunState();
+      renderOverlays();
+    }
+
+    async function runSimulation() {
+      if (state.images.length !== 3) return;
+
+      els.routeToast.textContent = "Simulating model flow...";
+      state.perception = await buildPerceptionFromExistingFlow(state.images);
+
+      const stages = [];
+      stages.push({
+        stage: "YOLO / perception",
+        label: "perception.json",
+        confidence: averageDetectionConfidence(state.perception),
+        accepted: true,
+        status: "accepted",
+        reason: "Mocked detections created from the selected scenario.",
+        metadata: {}
+      });
+
+      const occupancy = await runOccupancyMlp(state.perception);
+      stages.push(withStatus("Occupancy MLP", occupancy, occupancy.accepted ? "accepted" : "fallback"));
+
+      let finalDecision = null;
+
+      if (occupancy.accepted && occupancy.label === "occupied") {
+        stages.push(skippedStage("Clean / dirty", "Skipped because occupancy was confidently occupied."));
+        stages.push(skippedStage("GRU history", "Skipped because MLP produced a final occupied state."));
+        stages.push(skippedStage("Gemini fallback", "Skipped because no fallback was needed."));
+        finalDecision = toFinalDecision(occupancy, "Occupancy MLP");
+      } else if (occupancy.accepted && occupancy.label === "unoccupied") {
+        const cleanDirty = await runCleanDirtyClassifier(state.images, state.perception);
+        stages.push(withStatus("Clean / dirty", cleanDirty, cleanDirty.accepted ? "accepted" : "fallback"));
+
+        if (cleanDirty.accepted) {
+          stages.push(skippedStage("GRU history", "Skipped because clean/dirty classifier was confident."));
+          stages.push(skippedStage("Gemini fallback", "Skipped because no fallback was needed."));
+          finalDecision = toFinalDecision(cleanDirty, "Clean / dirty");
+        } else {
+          finalDecision = await runFallbackPath(stages);
+        }
+      } else {
+        stages.push(skippedStage("Clean / dirty", "Skipped because occupancy was not confidently unoccupied."));
+        finalDecision = await runFallbackPath(stages);
+      }
+
+      state.stages = stages;
+      state.finalDecision = finalDecision;
+      renderOverlays();
+      renderTimeline();
+      renderDecision();
+      renderHistory();
+      renderJson();
+      els.routeToast.textContent = `${finalDecision.source} produced final ${finalDecision.label}.`;
+    }
+
+    async function runFallbackPath(stages) {
+      const gru = await runGruFallback(currentScenario().history, state.perception, stages);
+      stages.push(withStatus("GRU history", gru, gru.accepted ? "accepted" : "fallback"));
+
+      if (gru.accepted) {
+        stages.push(skippedStage("Gemini fallback", "Skipped because GRU produced a confident state."));
+        return toFinalDecision(gru, "GRU history");
+      }
+
+      const gemini = await runGeminiFallback(state.images, currentScenario().history, state.perception, stages);
+      stages.push(withStatus("Gemini fallback", gemini, "final"));
+      return toFinalDecision(gemini, "Gemini fallback");
+    }
+
+    async function buildPerceptionFromExistingFlow(images) {
+      const scenario = currentScenario();
+      const people = [];
+
+      scenario.frames.forEach((frame, frameIndex) => {
+        if (!frame.box) return;
+        const image = images[frameIndex] || {};
+        const width = image.naturalWidth || 1280;
+        const height = image.naturalHeight || 960;
+        const [left, top, boxWidth, boxHeight] = frame.box;
+        const bbox = [
+          round(left * width),
+          round(top * height),
+          round((left + boxWidth) * width),
+          round((top + boxHeight) * height)
+        ];
+
+        people.push({
+          frame_index: frameIndex,
+          track_id: "t0",
+          centroid_x: round(left + boxWidth / 2, 4),
+          centroid_y: round(top + boxHeight / 2, 4),
+          bbox_xyxy: bbox,
+          overlap_frac_of_person: round(frame.overlap, 4),
+          overlap_frac_of_table: round(frame.tableOverlap, 4),
+          distance_norm: round(frame.distance, 4),
+          displacement_from_prev: frame.displacement === null ? null : round(frame.displacement, 4),
+          score: round(frame.score, 3)
+        });
+      });
+
+      const counts = scenario.frames.map((frame) => frame.peopleCount);
+      const overlap = scenario.frames.map((frame) => round(frame.overlap, 4));
+      const overlapSum = scenario.frames.map((frame) => round(frame.overlap * Math.max(frame.peopleCount, 1), 4));
+      const distances = scenario.frames.map((frame) => round(frame.distance, 4));
+      const displacements = scenario.frames
+        .map((frame) => frame.displacement)
+        .filter((value) => value !== null && Number.isFinite(value));
+      const entering = [Number(counts[1] > counts[0]), Number(counts[2] > counts[1])];
+      const leaving = [Number(counts[1] < counts[0]), Number(counts[2] < counts[1])];
+
+      return [{
+        people,
+        scalars: {
+          person_count: counts,
+          max_overlap_frac_of_person: overlap,
+          overlap_sum: overlapSum,
+          min_distance_norm: distances,
+          mean_displacement: displacements.length ? round(mean(displacements), 4) : 0,
+          max_displacement: displacements.length ? round(Math.max(...displacements), 4) : 0,
+          entering,
+          leaving,
+          persistent_count: counts.every((count) => count > 0) ? 1 : 0
+        },
+        image_metadata: images.map((image, index) => ({
+          frame_index: index,
+          filename: image.name,
+          width: image.naturalWidth,
+          height: image.naturalHeight
+        })),
+        mock: {
+          scenario_id: scenario.id,
+          table_region_norm: tableRegionForScenario(scenario)
+        }
+      }];
+    }
+
+    async function runOccupancyMlp(perceptionJson) {
+      const result = cloneResult(currentScenario().occupancy);
+      result.accepted = result.confidence >= OCCUPANCY_THRESHOLD && result.label !== "uncertain";
+      result.metadata = {
+        threshold: OCCUPANCY_THRESHOLD,
+        feature_source: "perception.json",
+        person_count: perceptionJson[0].scalars.person_count
+      };
+      return result;
+    }
+
+    async function runCleanDirtyClassifier(images, perceptionJson) {
+      const scenarioResult = currentScenario().cleanDirty || {
+        label: "uncertain",
+        confidence: 0,
+        reason: "No clean/dirty classifier was invoked for this scenario."
+      };
+      const result = cloneResult(scenarioResult);
+      result.accepted = result.confidence >= CLEAN_DIRTY_THRESHOLD && ["clean", "dirty"].includes(result.label);
+      result.metadata = {
+        threshold: CLEAN_DIRTY_THRESHOLD,
+        image_count: images.length,
+        scenario: perceptionJson[0].mock.scenario_id
+      };
+      return result;
+    }
+
+    async function runGruFallback(history, perceptionJson, stageResults) {
+      const result = cloneResult(currentScenario().gru);
+      result.accepted = result.confidence >= GRU_THRESHOLD && result.label !== "uncertain";
+      result.metadata = {
+        threshold: GRU_THRESHOLD,
+        history,
+        prior_stages: stageResults.map((stage) => stage.stage)
+      };
+      return result;
+    }
+
+    async function runGeminiFallback(images, history, perceptionJson, stageResults) {
+      const result = cloneResult(currentScenario().gemini);
+      result.accepted = true;
+      result.metadata = {
+        final_fallback: true,
+        image_count: images.length,
+        history,
+        prior_stages: stageResults.map((stage) => stage.stage),
+        perception_scenario: perceptionJson[0].mock.scenario_id
+      };
+      return result;
+    }
+
+    function renderOverlays() {
+      document.querySelectorAll(".image-frame").forEach((frameEl) => {
+        frameEl.querySelectorAll(".table-region, .bbox").forEach((node) => node.remove());
+      });
+
+      const scenario = currentScenario();
+      const tableRegion = tableRegionForScenario(scenario);
+
+      document.querySelectorAll(".image-frame").forEach((frameEl) => {
+        if (frameEl.classList.contains("empty")) return;
+        const frameIndex = Number(frameEl.dataset.frameIndex);
+        const table = document.createElement("div");
+        table.className = "table-region";
+        applyNormRect(table, tableRegion);
+        const tableLabel = document.createElement("div");
+        tableLabel.className = "box-label";
+        tableLabel.textContent = "table region";
+        table.appendChild(tableLabel);
+        frameEl.appendChild(table);
+
+        const scenarioFrame = scenario.frames[frameIndex];
+        if (scenarioFrame && scenarioFrame.box) {
+          const bbox = document.createElement("div");
+          bbox.className = "bbox";
+          applyNormRect(bbox, scenarioFrame.box);
+          const label = document.createElement("div");
+          label.className = "box-label";
+          label.textContent = `person ${Math.round(scenarioFrame.score * 100)}%`;
+          bbox.appendChild(label);
+          frameEl.appendChild(bbox);
+        }
+      });
+    }
+
+    function renderTimeline() {
+      els.timeline.innerHTML = "";
+      state.stages.forEach((stage) => {
+        const article = document.createElement("article");
+        article.className = `stage ${stage.status}`;
+        const confidence = Math.max(0, Math.min(1, stage.confidence || 0));
+        article.innerHTML = `
+          <div class="stage-top">
+            <div>
+              <div class="stage-name">${escapeHtml(stage.stage)}</div>
+              <div class="drop-meta">${escapeHtml(stage.label)}</div>
+            </div>
+            <span class="badge ${stage.status}">${escapeHtml(stage.status)}</span>
+          </div>
+          <div class="confidence-row">
+            <div class="bar"><span style="width: ${Math.round(confidence * 100)}%"></span></div>
+            <strong>${Math.round(confidence * 100)}%</strong>
+          </div>
+          <p class="stage-reason">${escapeHtml(stage.reason)}</p>
+        `;
+        els.timeline.appendChild(article);
+      });
+    }
+
+    function renderDecision() {
+      const decision = state.finalDecision;
+      if (!decision) return;
+      els.finalState.className = `final-state ${decision.label}`;
+      els.finalState.innerHTML = `
+        <div class="final-label">${escapeHtml(decision.label)}</div>
+        <div class="final-meta">${Math.round(decision.confidence * 100)}% confidence from ${escapeHtml(decision.source)}. ${escapeHtml(decision.reason)}</div>
+      `;
+
+      els.metricList.innerHTML = "";
+      state.stages
+        .filter((stage) => stage.status !== "skipped")
+        .forEach((stage) => {
+          const metric = document.createElement("div");
+          metric.className = "metric";
+          metric.innerHTML = `
+            <div class="metric-line"><span>${escapeHtml(stage.stage)}</span><strong>${Math.round((stage.confidence || 0) * 100)}%</strong></div>
+            <div class="bar"><span style="width: ${Math.round((stage.confidence || 0) * 100)}%"></span></div>
+          `;
+          els.metricList.appendChild(metric);
+        });
+    }
+
+    function renderHistory() {
+      els.history.innerHTML = "";
+      currentScenario().history.forEach((label, index) => {
+        const pill = document.createElement("span");
+        pill.className = "history-pill";
+        pill.textContent = `t-${currentScenario().history.length - index}: ${label}`;
+        els.history.appendChild(pill);
+      });
+    }
+
+    function renderJson() {
+      els.jsonOutput.textContent = JSON.stringify(state.perception, null, 2);
+      els.copyJsonButton.disabled = state.perception.length === 0;
+    }
+
+    function randomizeScenario() {
+      let next = Math.floor(Math.random() * scenarios.length);
+      if (scenarios.length > 1) {
+        while (next === state.scenarioIndex) {
+          next = Math.floor(Math.random() * scenarios.length);
+        }
+      }
+      state.scenarioIndex = next;
+      els.scenarioSelect.value = String(next);
+      renderHistory();
+      renderOverlays();
+      if (state.images.length === 3) {
+        runSimulation();
+      } else {
+        els.routeToast.textContent = `${currentScenario().name} selected.`;
+      }
+    }
+
+    async function copyJson() {
+      const text = els.jsonOutput.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        els.copyStatus.textContent = "Copied.";
+      } catch (error) {
+        els.copyStatus.textContent = "Clipboard unavailable.";
+      }
+      window.setTimeout(() => {
+        els.copyStatus.textContent = "";
+      }, 1600);
+    }
+
+    function currentScenario() {
+      return scenarios[state.scenarioIndex] || scenarios[0];
+    }
+
+    function withStatus(stageName, result, status) {
+      return {
+        stage: stageName,
+        label: result.label,
+        confidence: result.confidence,
+        accepted: result.accepted,
+        status,
+        reason: result.reason,
+        metadata: result.metadata || {}
+      };
+    }
+
+    function skippedStage(stage, reason) {
+      return {
+        stage,
+        label: "skipped",
+        confidence: 0,
+        accepted: false,
+        status: "skipped",
+        reason,
+        metadata: {}
+      };
+    }
+
+    function toFinalDecision(result, source) {
+      return {
+        label: result.label,
+        confidence: result.confidence,
+        source,
+        reason: result.reason,
+        metadata: result.metadata || {}
+      };
+    }
+
+    function cloneResult(result) {
+      return {
+        label: result.label,
+        confidence: result.confidence,
+        accepted: Boolean(result.accepted),
+        reason: result.reason,
+        metadata: Object.assign({}, result.metadata || {})
+      };
+    }
+
+    function averageDetectionConfidence(perception) {
+      const people = perception[0]?.people || [];
+      if (!people.length) return 0.86;
+      return round(mean(people.map((person) => person.score)), 3);
+    }
+
+    function tableRegionForScenario(scenario) {
+      if (scenario.id === "occupied") return [0.34, 0.45, 0.38, 0.27];
+      if (scenario.id === "gru") return [0.28, 0.48, 0.42, 0.25];
+      if (scenario.id === "gemini") return [0.30, 0.47, 0.43, 0.26];
+      return [0.31, 0.48, 0.39, 0.24];
+    }
+
+    function applyNormRect(el, rect) {
+      const [left, top, width, height] = rect;
+      el.style.left = `${left * 100}%`;
+      el.style.top = `${top * 100}%`;
+      el.style.width = `${width * 100}%`;
+      el.style.height = `${height * 100}%`;
+    }
+
+    function mean(values) {
+      return values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
+    }
+
+    function round(value, places = 2) {
+      const factor = 10 ** places;
+      return Math.round(value * factor) / factor;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    window.addEventListener("beforeunload", revokeImageUrls);
+    init();
+  </script>
+</body>
+</html>
