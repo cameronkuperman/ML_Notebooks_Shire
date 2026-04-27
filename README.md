@@ -73,6 +73,12 @@ Confidence threshold: 80%. When both local models fall below threshold, Gemini 2
 
 **Why Gemini escalation?** Both local models are trained on a single restaurant's data and can fail on novel table configurations or lighting. Gemini 2.5 Flash receives all three frames plus the full perception context — a richer signal than either local model alone — and provides a calibrated fallback without requiring retraining. The 80% confidence threshold was chosen by inspecting the threshold-tuning table from Cell 12 of the occupancy notebook.
 
+## Scope Note
+
+This repository is the academic submission version of a larger project that began in CS 372 and later evolved toward a real-world product/company. To protect restaurant-specific information, security-sensitive deployment details, and private production code, this repository excludes some production infrastructure and customer-specific materials.
+
+All rubric claims in the self-assessment are supported by files included in this submitted repository. The demo video may show broader product context, but the graded ML evidence is contained here.
+
 ## Individual Contributions
 
 **Kabir Sankaranrajendra**
