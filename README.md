@@ -75,7 +75,7 @@ Confidence threshold: 80%. When both local models fall below threshold, Gemini 2
 
 ## Scope Note
 
-This repository is the academic submission version of a larger project that began in CS 372 and later evolved toward a real-world product/company. To protect restaurant-specific information, security-sensitive deployment details, and private production code, this repository excludes some production infrastructure and customer-specific materials.
+This repository is the academic submission version of a larger project that began in CS 372 and is evolving toward a real-world product/company. To protect restaurant-specific information, and security-sensitive deployment details, this repository excludes some production infrastructure and customer-specific materials.
 
 All rubric claims in the self-assessment are supported by files included in this submitted repository. The demo video may show broader product context, but the graded ML evidence is contained here.
 
