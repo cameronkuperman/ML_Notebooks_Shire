@@ -16,16 +16,16 @@ This installs FastAPI, PyTorch, Transformers (DINOv3), scikit-learn, XGBoost, jo
 
 ## 2. Obtain Model Artifacts
 
-The trained model weights are not checked into the repo. You need two files in the repo root:
+The trained model weights are not checked into the repo. Place both files in the `models/` directory:
 
 | File | Description |
 |------|-------------|
-| `dinov3_classifier_full.pt` | Fine-tuned DINOv3-ViT-Large clean/dirty classifier |
-| `best_model_logistic_regression.joblib` | Trained occupancy VotingClassifier ensemble |
+| `models/dinov3_classifier_full.pt` | Fine-tuned DINOv3-ViT-Large clean/dirty classifier |
+| `models/best_model_logistic_regression.joblib` | Trained occupancy VotingClassifier ensemble |
 
 To retrain from scratch, run the notebooks in order:
-1. `simple_yolo_classifier_occ_unocc.ipynb` — trains and saves the occupancy `.joblib`
-2. `dino_v3_rerun_(1) (1).ipynb` — trains and saves the DINOv3 `.pt` (requires GPU, run on Colab)
+1. `notebooks/simple_yolo_classifier_occ_unocc.ipynb` — trains and saves the occupancy `.joblib`
+2. `notebooks/dino_v3_rerun_(1) (1).ipynb` — trains and saves the DINOv3 `.pt` (requires GPU, run on Colab)
 
 ## 3. Configure Environment Variables
 
@@ -47,7 +47,7 @@ export GEMINI_MODEL=gemini-2.5-flash
 ## 4. Run the Web Application
 
 ```bash
-cd serving/triplet_inference
+cd src/serving/triplet_inference
 uvicorn app:app --reload --port 8000
 ```
 
@@ -61,8 +61,8 @@ The UI accepts `.zip` files containing exactly:
 - `frame_2.jpg` — last frame
 - `perception.json` — track data from the perception system
 
-Sample zips are in the `exmaples/` directory.
+Sample zips are in the `data/examples/` directory.
 
 ## Colab Training (GPU)
 
-Open `dino_v3_rerun_(1) (1).ipynb` in Google Colab with a T4 or A100 runtime. The notebook installs its own dependencies via `!pip install` cells. After training, download `dinov3_classifier_full.pt` and place it in the repo root.
+Open `notebooks/dino_v3_rerun_(1) (1).ipynb` in Google Colab with a T4 or A100 runtime. The notebook installs its own dependencies via `!pip install` cells. After training, download `dinov3_classifier_full.pt` and place it in the `models/` directory.

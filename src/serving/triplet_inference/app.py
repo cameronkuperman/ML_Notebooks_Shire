@@ -13,13 +13,13 @@ from fastapi.responses import HTMLResponse
 
 MODEL_SERVER_DIR = Path(__file__).resolve().parents[1] / "dinov3_endpoint"
 sys.path.insert(0, str(MODEL_SERVER_DIR))
-ROOT_DIR = Path(__file__).resolve().parents[2]
+ROOT_DIR = Path(__file__).resolve().parents[3]
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 CONFIDENCE_THRESHOLD = float(os.getenv("TRIPLET_CONFIDENCE_THRESHOLD", "0.80"))
 REQUIRED_FRAMES = ("frame_0.jpg", "frame_1.jpg", "frame_2.jpg")
 
-os.environ.setdefault("PT_MODEL_PATH", str(ROOT_DIR / "dinov3_classifier_full.pt"))
-os.environ.setdefault("JOBLIB_MODEL_PATH", str(ROOT_DIR / "best_model_logistic_regression (1).joblib"))
+os.environ.setdefault("PT_MODEL_PATH", str(ROOT_DIR / "models" / "dinov3_classifier_full.pt"))
+os.environ.setdefault("JOBLIB_MODEL_PATH", str(ROOT_DIR / "models" / "best_model_logistic_regression (1).joblib"))
 
 from model_server import MultiModelService  # noqa: E402
 

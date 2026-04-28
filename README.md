@@ -16,19 +16,20 @@ git clone <repo-url>
 cd ML_Notebooks_Shire
 pip install -r requirements.txt
 
-# 2. Place model artifacts in the repo root
-#    - dinov3_classifier_full.pt         (fine-tuned DINOv3 clean/dirty model)
-#    - best_model_logistic_regression.joblib  (occupancy ensemble)
+# 2. Place model artifacts in the models/ directory
+#    - models/dinov3_classifier_full.pt         (fine-tuned DINOv3 clean/dirty model)
+#    - models/best_model_logistic_regression.joblib  (occupancy ensemble)
 
 # 3. Set your Gemini API key (optional — pipeline still works without it)
 export GEMINI_API_KEY=your_key_here
 
 # 4. Start the server
-cd serving/triplet_inference
+cd src/serving/triplet_inference
 uvicorn app:app --reload --port 8000
 
 # 5. Open http://localhost:8000 in your browser
 #    Drop a triplet zip (frame_0.jpg, frame_1.jpg, frame_2.jpg, perception.json) to run inference
+#    Sample zips are in data/examples/
 ```
 
 See [SETUP.md](SETUP.md) for full environment setup including Colab training instructions.
@@ -69,7 +70,7 @@ Confidence threshold: 80%. When both local models fall below threshold, Gemini 2
 
 **Why GroupShuffleSplit / GroupKFold?** Raw frame-level splits would leak temporal information — consecutive frames from the same video clip are nearly identical. We group by `(video_id, table_id)` so no group appears in both train and val/test, preventing inflated accuracy from temporal correlation. This is the correct methodology for video-derived datasets and mirrors best practices in action recognition benchmarks.
 
-**Why an ensemble for occupancy instead of a single model?** Occupancy prediction from `perception.json` features is a tabular problem where no single model dominates. XGBoost captures non-linear interactions, Random Forest provides variance reduction, and MLP learns smooth decision boundaries. Soft-voting the three produced +26 percentage points over a hardcoded majority baseline and was more robust than any individual model.
+**Why an ensemble for occupancy instead of a single model?** Occupancy prediction from `perception.json` features is a tabular problem where no single model dominates. XGBoost captures non-linear interactions, Random Forest provides variance reduction, and MLP learns smooth decision boundaries. Soft-voting the three produced +26 percentage points over a hardcoded person-count rule and was more robust than any individual model.
 
 **Why Gemini escalation?** Both local models are trained on a single restaurant's data and can fail on novel table configurations or lighting. Gemini 2.5 Flash receives all three frames plus the full perception context — a richer signal than either local model alone — and provides a calibrated fallback without requiring retraining. The 80% confidence threshold was chosen by inspecting the threshold-tuning table from Cell 12 of the occupancy notebook.
 
@@ -80,13 +81,13 @@ This repository is part of a larger project that began earlier this semester wit
 ## Individual Contributions
 
 **Kabir Sankaranrajendra**
-- Designed and trained the occupancy classification pipeline (`simple_yolo_classifier_occ_unocc.ipynb`): feature engineering from `perception.json`, XGBoost/RF/MLP ensemble, GroupShuffleSplit leakage-prevention strategy, feature ablation study, threshold tuning
-- Designed and trained the clean/dirty DINOv3 model (`dino_v3_rerun_(1) (1).ipynb`): fine-tuning DINOv3-ViT-Large, Focal Loss with label smoothing, warmup + cosine LR schedule, differential learning rates, image augmentation pipeline, multi-architecture ablation (ResNet-18/50 vs. DINOv3)
-- Built the multi-stage inference pipeline logic in `serving/triplet_inference/app.py`
+- Designed and trained the occupancy classification pipeline (`notebooks/simple_yolo_classifier_occ_unocc.ipynb`): feature engineering from `perception.json`, XGBoost/RF/MLP ensemble, GroupShuffleSplit leakage-prevention strategy, feature ablation study, threshold tuning
+- Designed and trained the clean/dirty DINOv3 model (`notebooks/dino_v3_rerun_(1) (1).ipynb`): fine-tuning DINOv3-ViT-Large, Focal Loss with label smoothing, warmup + cosine LR schedule, differential learning rates, image augmentation pipeline, multi-architecture ablation (ResNet-18/50 vs. DINOv3)
+- Built the multi-stage inference pipeline logic in `src/serving/triplet_inference/app.py`
 - Integrated Gemini 2.5 Flash escalation and confidence-threshold routing
 
 **Cameron Cuperman**
-- Built the perception data collection and simulation system (`table_perception_simulator.html`)
-- Developed the model serving infrastructure (`serving/dinov3_endpoint/model_server.py`): `MultiModelService`, `ImagePredictor`, `JoblibPredictor`, GCS artifact resolution, health endpoint
-- Designed the FastAPI web application front-end (`serving/triplet_inference/static/index.html`): drag-and-drop upload, per-stage pipeline timeline with confidence bars, color-coded decision card
-- Configured Vertex AI deployment (Dockerfile, `deploy_vertex.sh`)
+- Built the perception data collection and simulation system (`docs/table_perception_simulator.html`)
+- Developed the model serving infrastructure (`src/serving/dinov3_endpoint/model_server.py`): `MultiModelService`, `ImagePredictor`, `JoblibPredictor`, GCS artifact resolution, health endpoint
+- Designed the FastAPI web application front-end (`src/serving/triplet_inference/static/index.html`): drag-and-drop upload, per-stage pipeline timeline with confidence bars, color-coded decision card
+- Configured Vertex AI deployment (`src/serving/dinov3_endpoint/Dockerfile`, `src/serving/dinov3_endpoint/deploy_vertex.sh`)
