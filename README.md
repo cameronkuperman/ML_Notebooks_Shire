@@ -36,8 +36,8 @@ See [SETUP.md](SETUP.md) for full environment setup including Colab training ins
 
 ## Video Links
 
-- **Demo video:** _[link to be added]_
-- **Technical walkthrough:** _[link to be added]_
+- **Demo video: https://www.youtube.com/watch?v=Hrp1h42zlRA
+- **Technical walkthrough: https://youtu.be/wtWaT4PXIBM
 
 ## Evaluation
 
